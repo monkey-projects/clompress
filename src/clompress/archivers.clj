@@ -29,7 +29,8 @@
 
 (defn- tar-archiver [outputstream get-entry-name-from-path & paths]
   (with-open [tar-archive (TarArchiveOutputStream. outputstream)]
-    (.setLongFileMode tar-archive (TarArchiveOutputStream/LONGFILE_POSIX))
+    (.setLongFileMode tar-archive (TarArchiveOutputStream/BIGNUMBER_POSIX))
+    (.setBigNumberMode tar-archive (TarArchiveOutputStream/LONGFILE_POSIX))
     (doseq [path paths]
       (add-path-to-archive tar-archive path get-entry-name-from-path))
     (.finish tar-archive)))
