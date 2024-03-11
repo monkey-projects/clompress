@@ -1,6 +1,6 @@
 # :file_folder: clompress
 
-[![Clojars Project](https://img.shields.io/clojars/v/org.clojars.alperenbayramoglu/clompress.svg)](https://clojars.org/org.clojars.alperenbayramoglu/clompress)
+[![Clojars Project](https://img.shields.io/clojars/v/com.monkeyprojects/clompress.svg)](https://clojars.org/com.monkeyprojects/clompress)
 
 Clompress is easy to use library for working with archives, compression and
 decompression in Clojure. Currently acts like wrapper for library _Apache
@@ -35,13 +35,13 @@ clompress.compression/available-compressions
 ### Lein/Boot
 
 ```
-[org.clojars.alperenbayramoglu/clompress "0.1.0"]
+[com.monkeyprojects/clompress "0.1.0"]
 ```
 
 ### Clojure CLI/deps.edn
 
 ```
-org.clojars.alperenbayramoglu/clompress {:mvn/version "0.1.0"}
+com.monkeyprojects/clompress {:mvn/version "0.1.0"}
 ```
 
 ## Examples

@@ -1,0 +1,18 @@
+{:deps {org.apache.commons/commons-compress {:mvn/version "1.26.1"}
+        commons-io/commons-io {:mvn/version "2.15.1"}
+        org.tukaani/xz {:mvn/version "1.9"}}
+
+ :aliases
+ {:test
+  {:extra-deps {com.monkeyprojects/build {:mvn/version "0.2.0"}}
+   :exec-fn monkey.test/all}
+
+  :junit
+  {:exec-fn monkey.test/junit}
+
+  :jar
+  {:extra-deps {com.monkeyprojects/build {:mvn/version "0.2.0"}}
+   :exec-fn monkey.build/jar}
+
+  :publish
+  {:exec-fn monkey.build/jar+deploy}}}
