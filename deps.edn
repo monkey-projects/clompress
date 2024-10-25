@@ -1,6 +1,6 @@
-{:deps {org.apache.commons/commons-compress {:mvn/version "1.26.1"}
-        commons-io/commons-io {:mvn/version "2.15.1"}
-        org.tukaani/xz {:mvn/version "1.9"}}
+{:deps {org.apache.commons/commons-compress {:mvn/version "1.27.1"}
+        commons-io/commons-io {:mvn/version "2.17.0"}
+        org.tukaani/xz {:mvn/version "1.10"}}
 
  :aliases
  {:test
