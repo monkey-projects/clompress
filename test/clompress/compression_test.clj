@@ -1,13 +1,14 @@
 (ns clompress.compression-test
   (:require [clojure.test :refer :all]
-            [clompress.compression :refer :all]))
+            [clompress.compression :refer :all])
+  (:import [java.io ByteArrayInputStream ByteArrayOutputStream]))
 
 (defn compress-then-decompress-data [data compression]
-    (with-open [input-stream (java.io.ByteArrayInputStream. (.getBytes data))
-                output-stream (java.io.ByteArrayOutputStream.)]
+    (with-open [input-stream (ByteArrayInputStream. (.getBytes data))
+                output-stream (ByteArrayOutputStream.)]
       (compress input-stream output-stream compression)
-      (with-open [decompressed-stream (java.io.ByteArrayOutputStream.)]
-        (decompress (java.io.ByteArrayInputStream. (.toByteArray output-stream)) 
+      (with-open [decompressed-stream (ByteArrayOutputStream.)]
+        (decompress (ByteArrayInputStream. (.toByteArray output-stream)) 
                     decompressed-stream compression)
         (.toString decompressed-stream))))
 
@@ -47,3 +48,4 @@
           compressed-decompressed-data 
           (compress-then-decompress-data data "lz4-block")]
       (is (= data compressed-decompressed-data)))))
+

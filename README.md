@@ -35,13 +35,13 @@ clompress.compression/available-compressions
 ### Lein/Boot
 
 ```
-[com.monkeyprojects/clompress "0.1.0"]
+[com.monkeyprojects/clompress "0.1.1"]
 ```
 
 ### Clojure CLI/deps.edn
 
 ```
-com.monkeyprojects/clompress {:mvn/version "0.1.0"}
+com.monkeyprojects/clompress {:mvn/version "0.1.1"}
 ```
 
 ## Examples
@@ -101,6 +101,17 @@ com.monkeyprojects/clompress {:mvn/version "0.1.0"}
     (clompress.compression/decompress input-stream output-stream "bzip2")
 		(.toString output-stream)))
 ```
+
+## Hooks
+
+In the archiver options, you can pass to additional hook functions to influence
+the way files are added to the archives.
+
+ - `entry-name-resolver` takes the input path and returns the path to use in the archive
+ - `before-add` takes the `ArchiveEntry` object an allows you to do some modifications to it before it is put into the archive.
+
+The `before-add` is especially useful to set file permissions on the archive entry, since
+this information is system dependent and not stored automatically.
 
 ## License
 
