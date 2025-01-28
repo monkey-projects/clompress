@@ -1,4 +1,7 @@
-(ns monkey.clompress.build
-  (:require [monkey.ci.plugin.clj :as clj]))
+(ns build
+  (:require [monkey.ci.plugin
+             [clj :as clj]
+             [github :as gh]]))
 
-(clj/deps-library)
+[(clj/deps-library)
+ (gh/release-job {:dependencies "publish"})]
