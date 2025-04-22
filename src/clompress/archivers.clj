@@ -6,8 +6,7 @@
   (:import
     [org.apache.commons.compress.archivers.tar TarArchiveOutputStream]
     [org.apache.commons.compress.archivers.zip ZipArchiveOutputStream]
-    [org.apache.commons.io IOUtils])
-  (:gen-class))
+    [org.apache.commons.io IOUtils]))
 
 (defn- default-entry-name-resolver [path]
   (case (first path)

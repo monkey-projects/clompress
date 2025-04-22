@@ -1,7 +1,6 @@
 (ns clompress.compression
   (:import [org.apache.commons.compress.compressors CompressorStreamFactory]
-           [org.apache.commons.io IOUtils])
-  (:gen-class))
+           [org.apache.commons.io IOUtils]))
 
 (defn with-compression [stream compressor]
   '"Returns output stream that wrapped with compression."
