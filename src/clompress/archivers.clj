@@ -5,8 +5,7 @@
     [clompress.compression :refer [with-compression]])
   (:import
     [org.apache.commons.compress.archivers.tar TarArchiveOutputStream]
-    [org.apache.commons.compress.archivers.zip ZipArchiveOutputStream]
-    [org.apache.commons.io IOUtils]))
+    [org.apache.commons.compress.archivers.zip ZipArchiveOutputStream]))
 
 (defn- default-entry-name-resolver [path]
   (case (first path)
@@ -18,7 +17,8 @@
       default-entry-name-resolver))
 
 (defn- write-file-to-archive [archive entry]
-  (IOUtils/copy (io/input-stream entry) archive)) 
+  (with-open [in (io/input-stream entry)]
+    (io/copy in archive))) 
 
 (defn- add-entry-to-archive [archive entry before-add entry-name]
   (let [archive-entry (.createArchiveEntry archive entry entry-name)]
