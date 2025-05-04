@@ -4,4 +4,4 @@
              [github :as gh]]))
 
 [(clj/deps-library)
- (gh/release-job {:dependencies "publish"})]
+ (gh/release-job {:dependencies ["publish"]})]
