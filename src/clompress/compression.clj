@@ -8,7 +8,7 @@
     (.createCompressorOutputStream factory compressor stream)))
 
 (defn with-decompression [stream compressor]
-  '"Returns output stream that wrapped with compression."
+  '"Returns input stream that wrapped with decompression."
   (let [factory (CompressorStreamFactory.)]
     (.createCompressorInputStream factory compressor stream)))
 

@@ -1,11 +1,10 @@
 (ns clompress.archivers
-  (:require
-    [clojure.java.io :as io]
-    [clojure.tools.logging :as log]
-    [clompress.compression :refer [with-compression]])
-  (:import
-    [org.apache.commons.compress.archivers.tar TarArchiveOutputStream]
-    [org.apache.commons.compress.archivers.zip ZipArchiveOutputStream]))
+  (:require [clojure.java.io :as io]
+            [clojure.tools.logging :as log]
+            [clompress.compression :refer [with-compression]])
+  (:import [java.nio.file Files LinkOption]
+           [org.apache.commons.compress.archivers.tar TarArchiveEntry TarArchiveOutputStream TarConstants]
+           [org.apache.commons.compress.archivers.zip ZipArchiveOutputStream]))
 
 (defn- default-entry-name-resolver [path]
   (case (first path)
@@ -21,12 +20,17 @@
     (io/copy in archive))) 
 
 (defn- add-entry-to-archive [archive entry before-add entry-name]
-  (let [archive-entry (.createArchiveEntry archive entry entry-name)]
+  (let [path (.toPath entry)
+        link? (Files/isSymbolicLink path)
+        archive-entry (if link?
+                        (doto (TarArchiveEntry. entry-name TarConstants/LF_SYMLINK)
+                          (.setLinkName (str (.toRealPath path (make-array LinkOption 0)))))
+                        (.createArchiveEntry archive entry entry-name))]
     (when before-add
       (before-add archive-entry))
     (.putArchiveEntry archive archive-entry)
     (try
-      (when (.isFile entry)
+      (when (and (not link?) (.isFile entry))
         (write-file-to-archive archive entry))
       (catch Exception ex
         (log/error "Failed to write archive entry" entry-name ex)
@@ -66,13 +70,13 @@
   (partial archiver #(ZipArchiveOutputStream. %)))
 
 (defn- get-output-stream [{:keys [output-stream compression]}] 
-    (if (nil? compression)
-      output-stream
-      (with-compression output-stream compression)))
+  (if (nil? compression)
+    output-stream
+    (with-compression output-stream compression)))
 
 (def ^:private get-archiver
   { "tar" tar-archiver
-    "zip" zip-archiver})
+   "zip" zip-archiver})
 
 (defn archive
   "Archives specified files in paths.
