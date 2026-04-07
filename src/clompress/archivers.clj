@@ -1,14 +1,15 @@
 (ns clompress.archivers
-  (:require [clompress.archivers
+  (:require [babashka.fs :as fs]
+            [clompress.archivers
              [common :as c]
              [tar :as tar]
              [zip :as zip]]
-            [clompress.compression :refer [with-compression]]))
+            [clompress.compression :as cc]))
 
 (defn- get-output-stream [{:keys [output-stream compression]}] 
   (if (nil? compression)
     output-stream
-    (with-compression output-stream compression)))
+    (cc/with-compression output-stream compression)))
 
 (defmulti make-archiver :archive-type)
 
@@ -30,9 +31,20 @@
      - `entry-name-resolver`: 1-arity fn that takes the input path and outputs path to use in the archive
      - `before-add`: 1-arity fn that can do some changes on the archive entry before storing.  Useful to set file permissions for example."
   [options & paths]
-  (-> (make-archiver options)
-      (c/archive-paths options paths)))
+  (with-open [a (make-archiver options)]
+    (c/archive-paths a options paths)))
 
-(comment archive {:archive-type "tar" 
-                  :output-stream (io/output-stream "my-test.tar")} 
-         "<absolute-path>")
+(def strip-leading-slash
+  "Default entry name resolver that strips the leading slash from the path"
+  c/strip-leading-slash)
+
+(defn strip-dir
+  "Entry name resolver that strips the given directory from the input path"
+  [dir]
+  (fn [path]
+    (let [r (str (fs/relativize dir path))]
+      (if (empty? r) "." r))))
+
+(comment (archive {:archive-type "tar" 
+                   :output-stream (io/output-stream "my-test.tar")} 
+                  "<absolute-path>"))

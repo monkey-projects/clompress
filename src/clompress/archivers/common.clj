@@ -1,44 +1,36 @@
 (ns clompress.archivers.common
   "Common functionality shared among archivers"
-  (:require [clojure.java.io :as io])
+  (:require [babashka.fs :as fs]
+            [clojure.java.io :as io]
+            [clompress.core :as cc])
   (:import java.nio.file.Files))
 
-(defprotocol Archiver
-  (make-entry [this entry entry-name]
-    "Creates a new archive entry in the archive for the path")
-  (get-archive [this]
-    "Returns the underlying archive stream for this archiver"))
-
-(defn- default-entry-name-resolver [path]
+(defn strip-leading-slash
+  [path]
   (case (first path)
     \/ (subs path 1)
-    :else path))
+    path))
 
 (defn- get-entry-name-resolver [{:keys [entry-name-resolver]}]
   (or entry-name-resolver 
-      default-entry-name-resolver))
-
-#_(defn- write-file-to-archive [archive entry]
-  (with-open [in (io/input-stream entry)]
-    (io/copy in archive))) 
+      strip-leading-slash))
 
 (defn- add-entry-to-archive [archiver entry before-add entry-name]
   (let [path (.toPath entry)
-        archive-entry (make-entry archiver entry entry-name)
-        archive (get-archive archiver)]
+        archive-entry (cc/make-entry archiver entry entry-name)]
     (when before-add
       (before-add archive-entry))
-    (.putArchiveEntry archive archive-entry)
+    (.putArchiveEntry archiver archive-entry)
     (try
       (when (and (not (Files/isSymbolicLink path)) (.isFile entry))
-        (io/copy entry archive))
+        (io/copy entry archiver))
       (catch Exception ex
         (throw ex))
       (finally
-        (.closeArchiveEntry archive)))))
+        (.closeArchiveEntry archiver)))))
 
 (defn- add-path-to-archive [archiver path {:keys [before-add] :as opts}]
-  (let [entry (io/file path)
+  (let [entry (fs/file path)
         get-entry-name-from-path (get-entry-name-resolver opts)]
     (if (.isDirectory  entry) 
       (->> (file-seq entry)
@@ -53,6 +45,5 @@
     (add-path-to-archive archiver path opts)))
 
 (defn archive-paths [archiver opts paths]
-  (with-open [archive (get-archive archiver)]
-    (add-all archiver opts paths)
-    (.finish archive)))
+  (add-all archiver opts paths)
+  (.finish archiver))
