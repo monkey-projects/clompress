@@ -86,8 +86,13 @@
             (let [r (cu/unarchive (assoc default-opts :input-stream i)
                                   dest)
                   p (fs/path dest "subdir" "sub.txt")]
-              (is (fs/exists? p))))))
+              (is (fs/exists? p)))))))))
 
+(defn verify-permissions [default-opts]
+  (h/with-tmp-dir dir
+    (let [src (fs/create-dir (fs/path dir "src"))
+          a (fs/path dir (str "archive." (:archive-type default-opts)))
+          dest (fs/create-dir (fs/path dir "dest"))]
       (testing "retains file permissions"
         (let [p (fs/path src "test.sh")]
           (is (nil? (spit (fs/file p) "this is an executable file")))
@@ -109,6 +114,7 @@
             (is (fs/executable? p)))))
 
       (testing "extracts symlinks correctly"
+        (is (nil? (spit (fs/file src "test.txt") "This is a test")))
         (let [l (fs/create-sym-link (fs/path src "testlink") "test.txt")]
           (with-open [os (io/output-stream (fs/file a))]
             (is (nil? (sut/archive (merge default-opts {:output-stream os
@@ -124,9 +130,12 @@
 
 (deftest archive
   (testing "tar files"
-    (verify-archive {:compression "gz"
-                     :archive-type "tar"}))
+    (let [opts {:compression "gz"
+                :archive-type "tar"}]
+      (verify-archive opts)
+      (verify-permissions opts)))
 
   (testing "zip files"
-    ;; FIXME Unix permissions are stored but not read here?
+    ;; Even though zip files technically support symlinks and file permissions, the
+    ;; information doesn't seem to be loaded by commons compress.
     (verify-archive {:archive-type "zip"})))
