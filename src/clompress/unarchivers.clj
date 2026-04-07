@@ -8,7 +8,8 @@
              [utils :as u]]
             [clompress.core :as c]
             [clompress.unarchivers
-             [tar :as tar]])
+             [tar :as tar]
+             [zip :as zip]])
   (:import [org.apache.commons.compress.archivers ArchiveStreamFactory]))
 
 (def stream-factory (ArchiveStreamFactory.))

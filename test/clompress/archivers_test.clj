@@ -5,11 +5,13 @@
             [clompress
              [archivers :as sut]
              [compression :as cc]
-             [helpers :as h]])
+             [helpers :as h]
+             [unarchivers :as cu]])
   (:import [java.io ByteArrayInputStream ByteArrayOutputStream]
+           java.nio.file.attribute.PosixFilePermission
            org.apache.commons.compress.archivers.ArchiveStreamFactory))
 
-(deftest archive
+(defn verify-archive [default-opts]
   (testing "invokes `before-add` on the archive entry when file is added to archive"
     (let [data "this is test data"
           inv (atom [])
@@ -18,34 +20,113 @@
         (is (some? (fs/create-dir (fs/path dir subdir))))
         (is (nil? (spit (fs/file dir subdir "test.txt") data)))
         (with-open [output-stream (ByteArrayOutputStream.)]
-          (is (nil? (sut/archive {:output-stream output-stream
-                                  :compression "gz"
-                                  :archive-type "tar"
-                                  :before-add (partial swap! inv conj)}
+          (is (nil? (sut/archive (merge default-opts
+                                        {:output-stream output-stream
+                                         :before-add (partial swap! inv conj)})
                                  (str (fs/path dir subdir)))))
           (is (= 2 (count @inv))
               "invoked for directory and for file")))))
 
-  (testing "stores symlinks"
-    (let [data "this is test data"
-          subdir "input"]
-      (h/with-tmp-dir dir
-        (let [sd (fs/create-dir (fs/path dir subdir))
-              a (fs/path dir "archive.tgz")]
-          (is (some? sd))
-          (is (nil? (spit (fs/file sd "test.txt") data)))
-          (is (some? (fs/create-sym-link (fs/path sd "testlink") (fs/path sd "test.txt"))))
-          (with-open [output-stream (io/output-stream (fs/file a))]
-            (is (nil? (sut/archive {:output-stream output-stream
-                                    :compression "gz"
-                                    :archive-type "tar"}
-                                   (str sd)))))
-          (is (fs/exists? a))
-          ;; Inspect
-          (with-open [i (-> (ArchiveStreamFactory.)
-                        (.createArchiveInputStream ArchiveStreamFactory/TAR (cc/with-decompression (io/input-stream (fs/file a)) "gz")))]
-            (let [items (take-while some? (repeatedly #(.getNextEntry i)))]
-              (is (= 3 (count items)))
-              (is (= 1 (->> items
-                            (filter (memfn isSymbolicLink))
-                            (count)))))))))))
+  (h/with-tmp-dir dir
+    (let [src (fs/create-dir (fs/path dir "src"))
+          a (fs/path dir (str "archive." (:archive-type default-opts)))
+          dest (fs/create-dir (fs/path dir "dest"))]
+      (is (nil? (spit (fs/file src "test.txt") "This is a test")))
+
+      (testing "without name resolver"
+        (with-open [os (io/output-stream (fs/file a))]
+          (is (nil? (sut/archive (assoc default-opts :output-stream os)
+                                 src))))
+        
+        (testing "extracts full paths from archive in destination dir"
+          (with-open [i (io/input-stream (fs/file a))]
+            (let [r (cu/unarchive (assoc default-opts :input-stream i)
+                                  dest)
+                  p (fs/path dest src "test.txt")]
+              (is (= 2 (count r)))
+              (is (fs/exists? p))
+              (is (= "This is a test" (slurp (fs/file p))))))))
+
+      (testing "when stripping full path"
+        (with-open [os (io/output-stream (fs/file a))]
+          (is (nil? (sut/archive (merge default-opts {:output-stream os
+                                                      :entry-name-resolver (sut/strip-dir src)})
+                                 src))))
+        
+        (testing "extracts files from archive in destination dir"
+          (with-open [i (io/input-stream (fs/file a))]
+            (let [r (cu/unarchive (assoc default-opts :input-stream i)
+                                  dest)
+                  p (fs/path dest "test.txt")]
+              (is (= 2 (count r)))
+              (is (fs/exists? p))
+              (is (= "This is a test" (slurp (fs/file p)))
+                  (str p)))))
+
+        (testing "when predicate, only extracts file that match it"
+          (fs/delete (fs/path dest "test.txt"))
+          (with-open [i (io/input-stream (fs/file a))]
+            (let [r (cu/unarchive (merge default-opts {:input-stream i
+                                                       :filter-fn (constantly false)})
+                                  dest)
+                  p (fs/path dest "test.txt")]
+              (is (= 0 (count r)))
+              (is (not (fs/exists? p)))))))
+
+      (testing "extracts subdirs"
+        (let [sub (fs/create-dirs (fs/path src "subdir"))]
+          (is (fs/exists? sub))
+          (is (nil? (spit (fs/file sub "sub.txt") "This is in a subdir")))
+          (is (fs/exists? (fs/path sub "sub.txt")))
+          (with-open [os (io/output-stream (fs/file a))]
+            (is (nil? (sut/archive (merge default-opts {:output-stream os
+                                                        :entry-name-resolver (sut/strip-dir src)})
+                                   src))))
+          (with-open [i (io/input-stream (fs/file a))]
+            (let [r (cu/unarchive (assoc default-opts :input-stream i)
+                                  dest)
+                  p (fs/path dest "subdir" "sub.txt")]
+              (is (fs/exists? p))))))
+
+      (testing "retains file permissions"
+        (let [p (fs/path src "test.sh")]
+          (is (nil? (spit (fs/file p) "this is an executable file")))
+          ;; Make file executable
+          (is (= p (fs/set-posix-file-permissions
+                    p
+                    (conj (set (fs/posix-file-permissions p)) PosixFilePermission/OWNER_EXECUTE))))
+          (is (fs/executable? p)))
+        (with-open [os (io/output-stream (fs/file a))]
+          (is (nil? (sut/archive (merge default-opts {:output-stream os
+                                                      :entry-name-resolver (sut/strip-dir src)})
+                                 src))))
+        (with-open [i (io/input-stream (fs/file a))]
+          (let [r (cu/unarchive (assoc default-opts :input-stream i)
+                                dest)
+                p (fs/path dest "test.sh")]
+            (is (pos? (count r)))
+            (is (fs/exists? p))
+            (is (fs/executable? p)))))
+
+      (testing "extracts symlinks correctly"
+        (let [l (fs/create-sym-link (fs/path src "testlink") "test.txt")]
+          (with-open [os (io/output-stream (fs/file a))]
+            (is (nil? (sut/archive (merge default-opts {:output-stream os
+                                                        :entry-name-resolver (sut/strip-dir src)})
+                                   src))))
+          (with-open [i (io/input-stream (fs/file a))]
+            (let [r (cu/unarchive (assoc default-opts :input-stream i)
+                                  dest)
+                  p (fs/path dest "testlink")]
+              (is (pos? (count r)))
+              (is (fs/exists? p))
+              (is (fs/sym-link? p)))))))))
+
+(deftest archive
+  (testing "tar files"
+    (verify-archive {:compression "gz"
+                     :archive-type "tar"}))
+
+  (testing "zip files"
+    ;; FIXME Unix permissions are stored but not read here?
+    (verify-archive {:archive-type "zip"})))
