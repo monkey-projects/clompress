@@ -1,23 +1,27 @@
 (ns clompress.compression
   (:require [clojure.java.io :as io])
-  (:import [org.apache.commons.compress.compressors CompressorStreamFactory]))
+  (:import [org.apache.commons.compress.compressors CompressorStreamFactory CompressorInputStream
+            CompressorOutputStream]
+           [java.io InputStream OutputStream]))
 
-(defn with-compression [stream compressor]
+(set! *warn-on-reflection* true)
+
+(defn ^CompressorOutputStream with-compression [^OutputStream stream ^String compressor]
   '"Returns output stream that wrapped with compression."
   (let [factory (CompressorStreamFactory.)]
     (.createCompressorOutputStream factory compressor stream)))
 
-(defn with-decompression [stream compressor]
+(defn ^CompressorInputStream with-decompression [^InputStream stream ^String compressor]
   '"Returns input stream that wrapped with decompression."
   (let [factory (CompressorStreamFactory.)]
     (.createCompressorInputStream factory compressor stream)))
 
-(defn compress [input-stream output-stream compression]
+(defn compress [^InputStream input-stream ^OutputStream output-stream ^String compression]
   '"Redirects input stream to output stream with compression."
   (with-open [compressed-stream (with-compression output-stream compression)]
     (io/copy input-stream compressed-stream)))
 
-(defn decompress [input-stream output-stream compression]
+(defn decompress [^InputStream input-stream ^OutputStream output-stream ^String compression]
   '"Redirects input stream to output stream with decompression."
   (with-open [decompressed-stream (with-decompression input-stream compression)]
     (io/copy decompressed-stream output-stream)))

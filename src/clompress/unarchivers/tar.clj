@@ -3,11 +3,13 @@
   (:require [babashka.fs :as fs]
             [clompress.core :as c]
             [clompress.unarchivers.common :as uc])
-  (:import (org.apache.commons.compress.archivers.tar TarArchiveInputStream)))
+  (:import (org.apache.commons.compress.archivers.tar TarArchiveInputStream TarArchiveEntry)))
+
+(set! *warn-on-reflection* true)
 
 (extend-type TarArchiveInputStream
   c/Unarchiver
-  (extract-entry [this e dest]
+  (extract-entry [this ^TarArchiveEntry e dest]
     (let [f (fs/file dest (.getName e))]
       (cond
         (.isDirectory e)

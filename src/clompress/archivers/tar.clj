@@ -5,7 +5,10 @@
             [clompress.core :as c]
             [clompress.utils :as u])
   (:import [java.nio.file Files LinkOption]
+           java.io.File
            [org.apache.commons.compress.archivers.tar TarArchiveEntry TarArchiveOutputStream TarConstants]))
+
+(set! *warn-on-reflection* true)
 
 (defn make-archiver [output]
   (doto (TarArchiveOutputStream. output)
@@ -15,14 +18,14 @@
 (defn set-entry-mode
   "`before-add` handler that sets the TAR entry file mode using the posix file permissions.
    Note that this is applied by default by the `TarArchiver`."
-  [entry]
+  [^TarArchiveEntry entry]
   (.setMode entry (-> (.getFile entry)
                       (fs/posix-file-permissions)
                       (u/posix->mode))))
 
 (extend-type TarArchiveOutputStream
   c/Archiver
-  (make-entry [this entry entry-name]
+  (make-entry [this ^File entry ^String entry-name]
     (let [path (.toPath entry)]
       (if (Files/isSymbolicLink path)
         (doto (TarArchiveEntry. entry-name TarConstants/LF_SYMLINK)

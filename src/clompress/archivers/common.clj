@@ -3,7 +3,10 @@
   (:require [babashka.fs :as fs]
             [clojure.java.io :as io]
             [clompress.core :as cc])
-  (:import java.nio.file.Files))
+  (:import java.nio.file.Files java.io.File
+           org.apache.commons.compress.archivers.ArchiveOutputStream))
+
+(set! *warn-on-reflection* true)
 
 (defn strip-leading-slash
   [path]
@@ -15,7 +18,7 @@
   (or entry-name-resolver 
       strip-leading-slash))
 
-(defn- add-entry-to-archive [archiver entry before-add entry-name]
+(defn- add-entry-to-archive [^ArchiveOutputStream archiver ^File entry before-add entry-name]
   (let [path (.toPath entry)
         archive-entry (cc/make-entry archiver entry entry-name)]
     (when before-add
@@ -32,9 +35,9 @@
 (defn- add-path-to-archive [archiver path {:keys [before-add] :as opts}]
   (let [entry (fs/file path)
         get-entry-name-from-path (get-entry-name-resolver opts)]
-    (if (.isDirectory  entry) 
+    (if (.isDirectory entry) 
       (->> (file-seq entry)
-           (map #(->> (.getPath %1)
+           (map #(->> (.getPath ^File %1)
                       (get-entry-name-from-path)
                       (add-entry-to-archive archiver %1 before-add)))
            (doall))
@@ -44,6 +47,6 @@
   (doseq [path paths]
     (add-path-to-archive archiver path opts)))
 
-(defn archive-paths [archiver opts paths]
+(defn archive-paths [^ArchiveOutputStream archiver opts paths]
   (add-all archiver opts paths)
   (.finish archiver))

@@ -10,9 +10,12 @@
             [clompress.unarchivers
              [tar :as tar]
              [zip :as zip]])
-  (:import [org.apache.commons.compress.archivers ArchiveStreamFactory]))
+  (:import [org.apache.commons.compress.archivers ArchiveEntry ArchiveInputStream ArchiveStreamFactory]
+           java.io.InputStream))
 
-(def stream-factory (ArchiveStreamFactory.))
+(set! *warn-on-reflection* true)
+
+(def ^ArchiveStreamFactory stream-factory (ArchiveStreamFactory.))
 
 (def stream-factories
   {"tar" ArchiveStreamFactory/TAR
@@ -20,23 +23,23 @@
 
 (def available-unarchivers (keys stream-factories))
 
-(defn make-unarchiver
+(defn ^ArchiveInputStream make-unarchiver
   "Creates an unarchiver for the given input stream and type (see `available-unarchivers`)."
   [is type]
   (if-let [sf (get stream-factories type)]
     (.createArchiveInputStream stream-factory sf is)
     (throw (ex-info "Unsupported archive type" {:archive-type type}))))
 
-(defn- decompress
+(defn- ^InputStream decompress
   "Decompresses a source file.  Returns an input stream that will contain the
    decompressed archive."
-  [src type]
+  [^InputStream src type]
   (cond-> src
     type (cc/with-decompression type)))
 
 (defn entry-seq
   "Given an archive input stream, returns a lazy seq of its entries (as an `ArchiveEntry`)."
-  [ai]
+  [^ArchiveInputStream ai]
   (take-while some? (repeatedly #(.getNextEntry ai))))
 
 (defn- extract-archive
@@ -48,7 +51,7 @@
   (fs/create-dirs dest)
   (with-open [ai (make-unarchiver is type)]
     (->> (entry-seq ai)
-         (filter (comp pred (memfn getName)))
+         (filter (comp pred (memfn ^ArchiveEntry getName)))
          (map #(c/extract-entry ai % dest))
          (doall))))
 
