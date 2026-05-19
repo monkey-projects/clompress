@@ -7,12 +7,12 @@
 (set! *warn-on-reflection* true)
 
 (defn ^CompressorOutputStream with-compression [^OutputStream stream ^String compressor]
-  '"Returns output stream that wrapped with compression."
+  '"Returns output stream that is wrapped with compression."
   (let [factory (CompressorStreamFactory.)]
     (.createCompressorOutputStream factory compressor stream)))
 
 (defn ^CompressorInputStream with-decompression [^InputStream stream ^String compressor]
-  '"Returns input stream that wrapped with decompression."
+  '"Returns input stream that is wrapped with decompression."
   (let [factory (CompressorStreamFactory.)]
     (.createCompressorInputStream factory compressor stream)))
 

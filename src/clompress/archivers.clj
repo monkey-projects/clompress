@@ -4,7 +4,10 @@
              [common :as c]
              [tar :as tar]
              [zip :as zip]]
-            [clompress.compression :as cc]))
+            [clompress.compression :as cc])
+  (:import org.apache.commons.compress.archivers.ArchiveOutputStream))
+
+(set! *warn-on-reflection* true)
 
 (defn- get-output-stream [{:keys [output-stream compression]}] 
   (if (nil? compression)
@@ -31,7 +34,7 @@
      - `entry-name-resolver`: 1-arity fn that takes the input path and outputs path to use in the archive
      - `before-add`: 1-arity fn that can do some changes on the archive entry before storing.  Useful to set file permissions for example."
   [options & paths]
-  (with-open [a (make-archiver options)]
+  (with-open [a ^ArchiveOutputStream (make-archiver options)]
     (c/archive-paths a options paths)))
 
 (def strip-leading-slash
